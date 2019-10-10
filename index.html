@@ -10,21 +10,22 @@
 
         <style type="text/css">
 
-            body { background-color: black; margin: 0; }
+            body { background-color: black; margin: 0; font-family: Arial, Helvetica, sans-serif; }
             canvas { border: 1px solid #ccc; }
             #codeBox { border: 1px solid #ccc; width: 800px; height: 300px; overflow: scroll; }
             [type=button] { width: 379px; height: 40px; margin: 10px; }
             [type=textbox] { width: 379px; height: 40px; margin: 10px; }
             label { width: 379px; margin: 10px; margin: 0 10px; color: white; display: inline-block; }
             .floatContainer { display: inline; position: absolute; }
-            #float0 { color: #fff; font-family: arial; font-weight: bold; }
-            #float25 { color: #fff; font-family: arial; font-weight: bold; position: absolute; top: 92px; left: 0; }
+            #float100 { color: #fff; font-family: arial; font-weight: bold; }
+            #float75 { color: #fff; font-family: arial; font-weight: bold; position: absolute; top: 92px; left: 0; }
             #float50 { color: #fff; font-family: arial; font-weight: bold; position: absolute; top: 200px; left: 0; }
-            #float75 { color: #fff; font-family: arial; font-weight: bold; position: absolute; top: 294px; left: 0; }
-            #float100 { color: #fff; font-family: arial; font-weight: bold; position: absolute; top: 392px; left: 0; }
+            #float25 { color: #fff; font-family: arial; font-weight: bold; position: absolute; top: 294px; left: 0; }
+            #float0 { color: #fff; font-family: arial; font-weight: bold; position: absolute; top: 392px; left: 0; }
             label[for=currentValue] { background-color: #373; }
             label[for=binaryValue] { background-color: #373; }
-
+            #rgbValue { width: 379px; height: 40px; margin: 10px; display: inline-block; border: 1px solid white; vertical-align: top; }
+            h2 {text-align: center; color: white;}
         </style>
     </head>
     <body>
@@ -34,21 +35,36 @@
                 <span id="float0">0%</span><span id="float25">25%</span><span id="float50">50%</span><span id="float75">75%</span><span id="float100">100%</span>
             </div><br>
             <input type="button" id="pauseButton" value="Pause / Play"><input type="button" id="stepButton" value="Run Step"><br>
-            <label for="lowValue">Low Graph Value</label><label for="highValue">High Graph Value</label><br>
-            <input type="textbox" id="lowValue" value="-1"><input type="textbox" id="highValue" value="1"><br>
-            <label for="lowIterationValue">Low Iteration Value</label><label for="highIterationValue">High Iteration Value</label><br>
-            <input type="textbox" id="lowIterationValue" value="0"><input type="textbox" id="highIterationValue" value="1000"><br>
-            <label for="currentIterationValue">Current Iteration Value</label><label for="iterationChangeSpeed">Iteration Change Speed</label><label for="updateSpeedValue">Update Speed</label><label for="relativeMagnificationValue">Display Resolution</label><br>
-            <input type="textbox" id="currentIterationValue" value="0"><input type="textbox" id="iterationChangeSpeed" value="0.1"><input type="textbox" id="updateSpeedValue" value="10"><input type="textbox" id="relativeMagnificationValue" value="10"><br>
-            <label for="currentValue">Current Value</label><br>
-            <input type="textbox" id="currentValue" value="0"><br>
+            
+            <label for="currentValue">Current Value(s)</label><label for="currentValue">RGB Value</label><br>
+            <input type="textbox" id="currentValue" value="0"><div id="rgbValue"></div><br>
+            
             <textarea id="codeBox">
 // this function gets called and fed an 'iteration' parameter.
 // this parameter runs from the 'Low Iteration Value'
 // to the 'High Iteration Value', provided above.
 
-return [Math.sin(iteration), Math.pow(Math.sin(iteration), 4), Math.pow(Math.sin(iteration), 3)];
+return [
+    (Math.sin(iteration / 5) + 1) * 40, 
+    (Math.pow(Math.sin((iteration / 8) + Math.PI / 2), 4)) * 50, 
+    ((Math.pow(Math.sin(iteration / 4), 3) + 1) * 80) + 90
+];
             </textarea>
+
+            <h2>Additional Options</h2>
+
+            <label for="lowValue">Low Graph Value</label><label for="highValue">High Graph Value</label><br>
+            <input type="textbox" id="lowValue" value="0"><input type="textbox" id="highValue" value="255"><br>
+            
+            <label for="lowIterationValue">Low Iteration Value</label><label for="highIterationValue">High Iteration Value</label><br>
+            <input type="textbox" id="lowIterationValue" value="0"><input type="textbox" id="highIterationValue" value="942"><br>
+            
+            <label for="currentIterationValue">Current Iteration Value</label><label for="relativeMagnificationValue">Display Resolution</label><br>
+            <input type="textbox" id="currentIterationValue" value="0"><input type="textbox" id="relativeMagnificationValue" value="10"><br>
+            
+            <label for="iterationChangeSpeed">Iteration Change Speed</label><label for="updateSpeedValue">Update Speed</label><br>
+            <input type="textbox" id="iterationChangeSpeed" value="0.1"><input type="textbox" id="updateSpeedValue" value="1"><br>
+            
             
         </div>
     </body>
@@ -75,8 +91,8 @@ return [Math.sin(iteration), Math.pow(Math.sin(iteration), 4), Math.pow(Math.sin
         var freeRun = true;
         var runOnce = false;
         var elementsBound = false;
-        var lowGraphValue = -1;
-        var highGraphValue = 1;
+        var lowGraphValue = 0;
+        var highGraphValue = 255;
         var float0Output = undefined;
         var float25Output = undefined;
         var float50Output = undefined;
@@ -86,12 +102,13 @@ return [Math.sin(iteration), Math.pow(Math.sin(iteration), 4), Math.pow(Math.sin
         var lowCodeIterationValueInput = undefined;
         var highCodeIterationValueInput = undefined;
         var lowCodeIterationValue = 0;
-        var highCodeIterationValue = 1000;
+        var highCodeIterationValue = 942;
         var currentIterationValueOutput = undefined;
         var iterationChangeSpeedOutput = undefined;
+        var rgbValueOutput = undefined;
         var lastGraphValue = [0,0,0,0,0,0,0,0,0,0];
         var relativeMagnification = 10;
-        var updateSpeed = 10;
+        var updateSpeed = 1;
 
         // code to run before update looping starts.
 
@@ -124,7 +141,9 @@ return [Math.sin(iteration), Math.pow(Math.sin(iteration), 4), Math.pow(Math.sin
                 updateSpeedValueInput.addEventListener("keyup", function(e) { updateSpeed = parseInt(e.target.value); });
 
                 var iterationChangeSpeedOutput = document.getElementById("iterationChangeSpeed");
-                iterationChangeSpeedOutput.addEventListener("keyup", function(e) { iterationSpeedValue = parseFloat(e.target.value); });
+                iterationChangeSpeedOutput.addEventListener("keyup", function(e) { iteration = 0; iterationSpeedValue = parseFloat(e.target.value); });
+
+                rgbValueOutput = document.getElementById("rgbValue");
 
                 float0Output = document.getElementById("float0");
                 float25Output = document.getElementById("float25");
@@ -203,8 +222,16 @@ return [Math.sin(iteration), Math.pow(Math.sin(iteration), 4), Math.pow(Math.sin
                             drawGraphValue(val, index);
                         });
 
+                    if (value.length === 3) {
+
+                        rgbValueOutput.style.backgroundColor = "rgb(" + value[0] + ", " + value[1] + ", " + value[2] + ")";
+                    }
+
+                    currentValueOutput.value = value.join(", ");
+
                 } else {
 
+                    currentValueOutput.value = value;
                     drawGraphValue(value, 0);
                 }
 
@@ -214,7 +241,7 @@ return [Math.sin(iteration), Math.pow(Math.sin(iteration), 4), Math.pow(Math.sin
 
         function drawGraphValue(value, index) {
 
-            var valColors = ["green", "red", "blue", "white"];
+            var valColors = ["red", "green", "blue", "white", "cyan", "orange"];
             var steps = relativeMagnification;
             var stepWidth = (value - lastGraphValue[index]) / steps;
 
@@ -309,11 +336,9 @@ return [Math.sin(iteration), Math.pow(Math.sin(iteration), 4), Math.pow(Math.sin
             ctx.fillStyle = color;
             ctx.fillRect(
                 CANVAS_WIDTH - 1,
-                relativeValue,
+                400 - relativeValue,
                 2,
                 2);
-
-            currentValueOutput.value = parseInt(value);
         }
 
         // System stuff ////////////////////////////////////////
