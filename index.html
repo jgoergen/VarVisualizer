@@ -1,0 +1,502 @@
+<html>
+    <head>
+
+        <meta charset="utf-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+
+        <title></title>
+
+        <style type="text/css">
+
+            body { background-color: black; margin: 0; }
+            canvas { border: 1px solid #ccc; }
+            #codeBox { border: 1px solid #ccc; width: 800px; height: 300px; overflow: scroll; }
+            [type=button] { width: 379px; height: 40px; margin: 10px; }
+            [type=textbox] { width: 379px; height: 40px; margin: 10px; }
+            label { width: 379px; margin: 10px; margin: 0 10px; color: white; display: inline-block; }
+            .floatContainer { display: inline; position: absolute; }
+            #float0 { color: #fff; font-family: arial; font-weight: bold; }
+            #float25 { color: #fff; font-family: arial; font-weight: bold; position: absolute; top: 92px; left: 0; }
+            #float50 { color: #fff; font-family: arial; font-weight: bold; position: absolute; top: 200px; left: 0; }
+            #float75 { color: #fff; font-family: arial; font-weight: bold; position: absolute; top: 294px; left: 0; }
+            #float100 { color: #fff; font-family: arial; font-weight: bold; position: absolute; top: 392px; left: 0; }
+            label[for=currentValue] { background-color: #373; }
+            label[for=binaryValue] { background-color: #373; }
+
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <canvas id="canvas" width="800" height="200"></canvas>
+            <div class="floatContainer">
+                <span id="float0">0%</span><span id="float25">25%</span><span id="float50">50%</span><span id="float75">75%</span><span id="float100">100%</span>
+            </div><br>
+            <input type="button" id="pauseButton" value="Pause / Play"><input type="button" id="stepButton" value="Run Step"><br>
+            <label for="lowValue">Low Graph Value</label><label for="highValue">High Graph Value</label><br>
+            <input type="textbox" id="lowValue" value="-1"><input type="textbox" id="highValue" value="1"><br>
+            <label for="lowIterationValue">Low Iteration Value</label><label for="highIterationValue">High Iteration Value</label><br>
+            <input type="textbox" id="lowIterationValue" value="0"><input type="textbox" id="highIterationValue" value="1000"><br>
+            <label for="currentIterationValue">Current Iteration Value</label><label for="iterationChangeSpeed">Iteration Change Speed</label><label for="updateSpeedValue">Update Speed</label><label for="relativeMagnificationValue">Display Resolution</label><br>
+            <input type="textbox" id="currentIterationValue" value="0"><input type="textbox" id="iterationChangeSpeed" value="0.1"><input type="textbox" id="updateSpeedValue" value="10"><input type="textbox" id="relativeMagnificationValue" value="10"><br>
+            <label for="currentValue">Current Value</label><br>
+            <input type="textbox" id="currentValue" value="0"><br>
+            <textarea id="codeBox">
+// this function gets called and fed an 'iteration' parameter.
+// this parameter runs from the 'Low Iteration Value'
+// to the 'High Iteration Value', provided above.
+
+return [Math.sin(iteration), Math.pow(Math.sin(iteration), 4), Math.pow(Math.sin(iteration), 3)];
+            </textarea>
+            
+        </div>
+    </body>
+
+    <script type="text/javascript">
+
+        /// Settings ////////////////////////////////////////////
+
+        // put any adjustable settings here that would be interesting to tinker with.
+
+        var FPS = 60;
+        var CANVAS_WIDTH = 800;
+        var CANVAS_HEIGHT = 400;
+
+        /////////////////////////////////////////////////////////
+
+        var localCtxReference = undefined;
+        var lastTime = 0;
+        var date = undefined;
+        var elapsed = 0;
+        var calcFunction = undefined;
+        var iteration = 0;
+        var iterationSpeedValue = 0.1;
+        var freeRun = true;
+        var runOnce = false;
+        var elementsBound = false;
+        var lowGraphValue = -1;
+        var highGraphValue = 1;
+        var float0Output = undefined;
+        var float25Output = undefined;
+        var float50Output = undefined;
+        var float75Output = undefined;
+        var float100Output = undefined;
+        var currentValueOutput = undefined;
+        var lowCodeIterationValueInput = undefined;
+        var highCodeIterationValueInput = undefined;
+        var lowCodeIterationValue = 0;
+        var highCodeIterationValue = 1000;
+        var currentIterationValueOutput = undefined;
+        var iterationChangeSpeedOutput = undefined;
+        var lastGraphValue = [0,0,0,0,0,0,0,0,0,0];
+        var relativeMagnification = 10;
+        var updateSpeed = 10;
+
+        // code to run before update looping starts.
+
+        function init(ctx, code) {
+            
+            if (!elementsBound) {
+                    
+                var playPause = document.getElementById("pauseButton");
+                playPause.addEventListener("click", function() { freeRun = !freeRun; });
+
+                var step = document.getElementById("stepButton");
+                step.addEventListener("click", function() { runOnce = true; });
+
+                var lowValueInput = document.getElementById("lowValue");
+                lowValueInput.addEventListener("keyup", function(e) { lowGraphValue = parseInt(e.target.value); updatePercentageDisplays(); });
+
+                var highValueInput = document.getElementById("highValue");
+                highValueInput.addEventListener("keyup", function(e) { highGraphValue = parseInt(e.target.value); updatePercentageDisplays(); });
+
+                var lowCodeIterationValueInput = document.getElementById("lowIterationValue");
+                lowCodeIterationValueInput.addEventListener("keyup", function(e) { lowCodeIterationValue = parseInt(e.target.value); iteration = lowCodeIterationValue; });
+                
+                var highCodeIterationValueInput = document.getElementById("highIterationValue");
+                highCodeIterationValueInput.addEventListener("keyup", function(e) { highCodeIterationValue = parseInt(e.target.value); iteration = lowCodeIterationValue; });
+
+                var relativeMagnificationValueInput = document.getElementById("relativeMagnificationValue");
+                relativeMagnificationValueInput.addEventListener("keyup", function(e) { relativeMagnification = parseInt(e.target.value); });
+
+                var updateSpeedValueInput = document.getElementById("updateSpeedValue");
+                updateSpeedValueInput.addEventListener("keyup", function(e) { updateSpeed = parseInt(e.target.value); });
+
+                var iterationChangeSpeedOutput = document.getElementById("iterationChangeSpeed");
+                iterationChangeSpeedOutput.addEventListener("keyup", function(e) { iterationSpeedValue = parseFloat(e.target.value); });
+
+                float0Output = document.getElementById("float0");
+                float25Output = document.getElementById("float25");
+                float50Output = document.getElementById("float50");
+                float75Output = document.getElementById("float75");
+                float100Output = document.getElementById("float100");
+
+                currentValueOutput = document.getElementById("currentValue");
+                currentIterationValueOutput = document.getElementById("currentIterationValue");
+                elementsBound = true;
+            }
+
+            localCtxReference = ctx;
+            localCtxReference.fillStyle = "white";
+            lastTime = new Date();
+            elapsed = Math.random() * 10000;
+
+            try {
+
+                calcFunction = eval("(function(timeElapsed, iteration){ " + code + "})");
+            
+            } catch (e) {
+
+                calcFunction = undefined;
+            }
+
+            updatePercentageDisplays();
+        }
+        
+        // code to run every frame.
+
+        function update(ctx, canvas) {
+
+            if (!freeRun && !runOnce)
+                return;
+
+            if (runOnce)
+            runOnce = false;
+
+            if (!calcFunction)
+                return;
+
+            date = new Date();
+            elapsed += date - lastTime;
+
+            for (var i = 0; i < updateSpeed; i++) {
+                    
+                lastTime = date;
+                iteration += iterationSpeedValue;
+
+                if (iteration > highCodeIterationValue)
+                    iteration = lowCodeIterationValue;
+
+                currentIterationValueOutput.value = iteration;
+                
+                var value = 0;
+
+                try {
+
+                    value = calcFunction(elapsed, iteration);
+                
+                } catch (e) {
+
+                    iteration = lowCodeIterationValue;
+                    calcFunction = undefined;
+                    return;
+                }
+
+                // draw 10 steps from the last value, to the current ( for better resolution on the graph. )
+
+                if (Array.isArray(value)) {
+
+                    value.forEach(
+                        function(val, index) {
+
+                            drawGraphValue(val, index);
+                        });
+
+                } else {
+
+                    drawGraphValue(value, 0);
+                }
+
+                bumpGraph(ctx, canvas);
+            }
+        }
+
+        function drawGraphValue(value, index) {
+
+            var valColors = ["green", "red", "blue", "white"];
+            var steps = relativeMagnification;
+            var stepWidth = (value - lastGraphValue[index]) / steps;
+
+            for (var step = 0; step < steps; step ++)
+                drawGraph(
+                    ctx, 
+                    canvas,
+                    lastGraphValue[index] + (stepWidth * step),
+                    lastGraphValue[index],
+                    valColors[index]);
+
+            lastGraphValue[index] = value;
+        }
+
+        function map(value, fromStart, fromEnd, toStart, toEnd) {
+
+            return (value - fromStart) / (fromEnd - fromStart) * (toEnd - toStart) + toStart;
+        }
+
+        function updatePercentageDisplays() {
+
+            var range = highGraphValue - lowGraphValue;
+            float0Output.innerHTML = lowGraphValue;
+            float25Output.innerHTML = (range / 4) + lowGraphValue;
+            float50Output.innerHTML = (range / 2) + lowGraphValue;
+            float75Output.innerHTML = ((range / 4) * 3) + lowGraphValue;
+            float100Output.innerHTML = highGraphValue;
+        }
+
+        function createBinaryString (nMask) {
+
+            // function via: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Bitwise_Operators
+            // nMask must be between -2147483648 and 2147483647
+
+            for (var nFlag = 0, nShifted = nMask, sMask = ""; nFlag < 32;
+                nFlag++, sMask += String(nShifted >>> 31), nShifted <<= 1);
+            return sMask;
+        }
+
+        function bumpGraph(ctx, canvas) {
+
+            // move graph over 1 pixel to the left
+            ctx.drawImage(
+                canvas, 
+                -1, 
+                0,
+                CANVAS_WIDTH, 
+                CANVAS_HEIGHT);
+
+            // clear the right most row for new points
+            ctx.fillStyle = "#000";
+            ctx.fillRect(
+                CANVAS_WIDTH - 1,
+                0,
+                1,
+                CANVAS_HEIGHT);
+
+            // draw midpoint pixel on the right
+            ctx.fillStyle = "#fff";
+            ctx.fillRect(
+                CANVAS_WIDTH - 1,
+                CANVAS_HEIGHT / 2,
+                1,
+                1);
+
+            // draw 1/4 pixel on the right
+            ctx.fillStyle = "#777";
+            ctx.fillRect(
+                CANVAS_WIDTH - 1,
+                CANVAS_HEIGHT / 4,
+                1,
+                1);
+
+            // draw 3/4 pixel on the right
+            ctx.fillStyle = "#777";
+            ctx.fillRect(
+                CANVAS_WIDTH - 1,
+                (CANVAS_HEIGHT / 4) * 3,
+                1,
+                1);
+        }
+
+        function drawGraph(ctx, canvas, value, lastValue, color) {
+            
+            // get graph position from value, relative to high / low inputs
+            // lowGraphValue highGraphValue
+
+            var relativeValue = map(value, lowGraphValue, highGraphValue, 0, 400);
+            var lastRelativeValue = map(lastValue, lowGraphValue, highGraphValue, 0, 400);
+
+            // draw value pixel at the right
+            ctx.fillStyle = color;
+            ctx.fillRect(
+                CANVAS_WIDTH - 1,
+                relativeValue,
+                2,
+                2);
+
+            currentValueOutput.value = parseInt(value);
+        }
+
+        // System stuff ////////////////////////////////////////
+
+        (function() {
+
+            var thisRef = this;
+            this.ctx = undefined;
+            this.canvas = undefined;
+            this.isMouseDown = false;
+            this.isSecondaryMouseDown = false;
+            this.now = undefined;
+            this.then = Date.now();
+            this.interval = 1000 / FPS;
+            this.delta;
+            this.lastX = undefined;
+            this.lastY = undefined;
+            this.canvasOffsetX = undefined;
+            this.canvasOffsetY = undefined;
+            this.codeBox = undefined;
+
+            this.initialize = function() {
+
+                this.canvas = 
+                    document
+                    .getElementById(
+                        "canvas");
+
+                this.canvas.width = CANVAS_WIDTH;
+                this.canvas.height = CANVAS_HEIGHT;
+                this.canvasOffsetX = this.canvas.offsetLeft;
+                this.canvasOffsetY = this.canvas.offsetTop;
+
+                this.ctx = 
+                    canvas
+                    .getContext(
+                        "2d");
+
+                codeBox = document.getElementById("codeBox");
+                codeBox.addEventListener("keyup", function() { thisRef.doInit(); });
+
+                thisRef.doInit();
+                requestAnimationFrame(this.run);
+            };
+
+            this.doInit = function() {
+
+                var code = this.codeBox.value;
+                init(this.ctx, code);
+            }
+            
+            this.interpolateMove = function(x, y) {
+
+                // fix canvas scaling
+                x = x * this.canvas.width / this.canvas.clientWidth;
+                y = y * this.canvas.height / this.canvas.clientHeight;
+
+                var result = [];
+
+                if (!this.lastX) {
+
+                    this.lastX = x;
+                    this.lastY = y;
+                }
+
+                var distance = Math.sqrt((x - lastX) * (x - lastX) + (y - lastY) * (y - lastY));
+                var steps = distance / 4;
+                var intervalX = (x - lastX) / steps;
+                var intervalY = (y - lastY) / steps;
+
+                for (var step = 0; step < steps; step ++) {
+
+                    x = lastX + (step * intervalX);
+                    y = lastY + (step * intervalY);
+                    result.push({x: x, y: y, speed: distance});
+                }
+
+                this.lastX = x;
+                this.lastY = y;
+
+                return result;
+            }
+
+            this.touchStartHanlder = function(e) {
+
+                if (e.touches.length == 1)
+                    mouseDown({ x: e.touches[0].pageX - this.canvasOffsetX, y: e.touches[0].pageY - this.canvasOffsetY });
+                else if (e.touches.length == 2)
+                    secondaryMouseDown({ x: e.touches[0].pageX - this.canvasOffsetX, y: e.touches[0].pageY - this.canvasOffsetY });
+            }
+
+            this.touchEndHanlder = function(e) {
+
+                if (e.touches.length == 0)
+                    mouseUp();
+                else if (e.touches.length == 1)
+                    secondaryMouseUp();
+
+                this.lastX = undefined;
+                this.lastY = undefined;
+            }
+
+            this.touchMoveHanlder = function(e) {
+
+                var steps = 
+                    this.interpolateMove(
+                        e.touches[0].pageX - this.canvasOffsetX, 
+                        e.touches[0].pageY - this.canvasOffsetY);
+                        
+                for (var i = 0; i < steps.length; i++) {
+
+                    if (e.touches.length == 0)
+                        mouseMove(steps[i], false);
+                    else if (e.touches.length == 1)
+                        mouseMove(steps[i], true);
+                    else if (e.touches.length == 2)
+                        secondaryMouseMove(steps[i]);
+                }
+            }
+
+            this.mouseDownHandler = function(e) {
+
+                if ((e.which === 3 || e.button === 2)) {
+
+                    isSecondaryMouseDown = true;
+                    secondaryMouseDown(e);
+                } else {
+
+                    isMouseDown = true;
+                    mouseDown(e);
+                }
+            }
+
+            this.mouseUpHandler = function(e) {
+
+                if ((e.which === 3 || e.button === 2)) {
+
+                    isSecondaryMouseDown = false;
+                    secondaryMouseUp(e);
+                } else {
+
+                    isMouseDown = false;
+                    mouseUp(e);
+                }
+
+                this.lastX = undefined;
+                this.lastY = undefined;
+            }
+
+            this.mouseMoveHandler = function(e) {
+
+                var steps = 
+                    this.interpolateMove(
+                        e.offsetX, 
+                        e.offsetY);
+
+                for (var i = 0; i < steps.length; i++) {
+
+                    if (!isMouseDown && !isSecondaryMouseDown)
+                        mouseMove(steps[i], false);
+                    else if (isMouseDown)
+                        mouseMove(steps[i], true);
+                    else if (isSecondaryMouseDown)
+                        secondaryMouseMove(steps[i]);
+                }
+            }
+
+            this.run = function() {
+
+                now = Date.now();
+                delta = now - then;
+
+                if (delta > interval) {
+                    
+                    then = now - (delta % interval);
+                    update(this.ctx, this.canvas);
+                }
+
+                requestAnimationFrame(this.run);
+            }
+
+            window.onload = this.initialize;
+        })();
+
+    </script>
+</html>
