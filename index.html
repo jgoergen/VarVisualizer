@@ -10,7 +10,7 @@
 
         <style type="text/css">
 
-            body { background-color: black; margin: 0; font-family: Arial, Helvetica, sans-serif; }
+            body { background-color: black; margin: 0; font-family: Arial, Helvetica, sans-serif; text-align: center;}
             canvas { border: 1px solid #ccc; }
             #codeBox { border: 1px solid #ccc; width: 800px; height: 300px; overflow: scroll; }
             [type=button] { width: 379px; height: 40px; margin: 10px; }
@@ -26,6 +26,7 @@
             label[for=binaryValue] { background-color: #373; }
             #rgbValue { width: 379px; height: 40px; margin: 10px; display: inline-block; border: 1px solid white; vertical-align: top; }
             h2 {text-align: center; color: white;}
+
         </style>
     </head>
     <body>
@@ -227,7 +228,7 @@ return [
                         rgbValueOutput.style.backgroundColor = "rgb(" + value[0] + ", " + value[1] + ", " + value[2] + ")";
                     }
 
-                    currentValueOutput.value = value.join(", ");
+                    currentValueOutput.value = value.map(function(v) { return v.toFixed(2); }).join(", ");
 
                 } else {
 
