@@ -27,6 +27,10 @@
             #rgbValue { width: 379px; height: 40px; margin: 10px; display: inline-block; border: 1px solid white; vertical-align: top; }
             h2 {text-align: center; color: white;}
 
+            body.minimal { margin-top: 18px; }
+            body.minimal [type=button] { display: none; }
+            body.minimal textarea { height: 180px !important; }
+            body.minimal .options { display: none; }
         </style>
     </head>
     <body>
@@ -52,20 +56,21 @@ return [
 ];
             </textarea>
 
-            <h2>Additional Options</h2>
+            <div class="options">
+                <h2>Additional Options</h2>
 
-            <label for="lowValue">Low Graph Value</label><label for="highValue">High Graph Value</label><br>
-            <input type="textbox" id="lowValue" value="0"><input type="textbox" id="highValue" value="255"><br>
-            
-            <label for="lowIterationValue">Low Iteration Value</label><label for="highIterationValue">High Iteration Value</label><br>
-            <input type="textbox" id="lowIterationValue" value="0"><input type="textbox" id="highIterationValue" value="942"><br>
-            
-            <label for="currentIterationValue">Current Iteration Value</label><label for="relativeMagnificationValue">Display Resolution</label><br>
-            <input type="textbox" id="currentIterationValue" value="0"><input type="textbox" id="relativeMagnificationValue" value="10"><br>
-            
-            <label for="iterationChangeSpeed">Iteration Change Speed</label><label for="updateSpeedValue">Update Speed</label><br>
-            <input type="textbox" id="iterationChangeSpeed" value="0.1"><input type="textbox" id="updateSpeedValue" value="1"><br>
-            
+                <label for="lowValue">Low Graph Value</label><label for="highValue">High Graph Value</label><br>
+                <input type="textbox" id="lowValue" value="0"><input type="textbox" id="highValue" value="255"><br>
+                
+                <label for="lowIterationValue">Low Iteration Value</label><label for="highIterationValue">High Iteration Value</label><br>
+                <input type="textbox" id="lowIterationValue" value="0"><input type="textbox" id="highIterationValue" value="942"><br>
+                
+                <label for="currentIterationValue">Current Iteration Value</label><label for="relativeMagnificationValue">Display Resolution</label><br>
+                <input type="textbox" id="currentIterationValue" value="0"><input type="textbox" id="relativeMagnificationValue" value="10"><br>
+                
+                <label for="iterationChangeSpeed">Iteration Change Speed</label><label for="updateSpeedValue">Update Speed</label><br>
+                <input type="textbox" id="iterationChangeSpeed" value="0.1"><input type="textbox" id="updateSpeedValue" value="1"><br>
+            </div>
             
         </div>
     </body>
@@ -114,6 +119,14 @@ return [
         // code to run before update looping starts.
 
         function init(ctx, code) {
+
+            var urlParams = new URLSearchParams(window.location.search);
+            var minimalView = urlParams.get('minimal');
+            if (minimalView == "true") {
+
+                var body = document.querySelector("body");
+                body.classList = "minimal";
+            }
             
             if (!elementsBound) {
                     
@@ -228,7 +241,17 @@ return [
                         rgbValueOutput.style.backgroundColor = "rgb(" + value[0] + ", " + value[1] + ", " + value[2] + ")";
                     }
 
-                    currentValueOutput.value = value.map(function(v) { return v.toFixed(2); }).join(", ");
+                    currentValueOutput.value = 
+                        value
+                        .map(
+                            function(v) { 
+
+                                if (typeof v === "number")
+                                    return v.toFixed(2); 
+                                else
+                                    return "";                            
+                            })
+                        .join(", ");
 
                 } else {
 
